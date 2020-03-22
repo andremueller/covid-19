@@ -1,7 +1,10 @@
-# COVID-19 Analysis
+# COVID-19 Analysis using R
 
-https://www.visualcapitalist.com/infection-trajectory-flattening-the-covid19-curve/
-  
+1. We use the data base pushed daily by the John Hopkins University https://github.com/CSSEGISandData/COVID-19.git
+2. Required https://www.r-project.org with some packages (look the source code)
+
+see also https://www.visualcapitalist.com/infection-trajectory-flattening-the-covid19-curve/
+
 ## Measures
 
 - Quarantining
@@ -11,3 +14,9 @@ https://www.visualcapitalist.com/infection-trajectory-flattening-the-covid19-cur
 - Placing hard limits on the size of crowds at events
 - Lockdown
 - Travel Bans
+
+
+## TODO
+
+I would like to formulate the dates of the measures of each for painting those into the data.
+
