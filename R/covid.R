@@ -29,10 +29,14 @@ y <- read_csv("../COVID-19/data/cases_time.csv",
               )) %>% mutate(Last_Update = mdy(Last_Update))
 
 y1 <- y %>% 
-  mutate(Replication_Rate = Delta_Confirmed / Confirmed)
-  
+  group_by(Country_Region) %>%
+  mutate(Replication_Rate = (Confirmed - lag(Confirmed)) / lag(Confirmed)) %>%
+  ungroup()
+sel <- c('Germany', 'China', 'Italy', 'France')
 p <- y1 %>% 
-  filter(Country_Region == 'Germany') %>%
-  ggplot(aes(Last_Update, Replication_Rate, text = Confirmed)) + geom_line()
+  filter(Country_Region %in% sel) %>%
+  ggplot(aes(Last_Update, Replication_Rate, text = Confirmed, color = Country_Region)) + geom_line()
 q <- plotly::ggplotly(p, dynamicTicks = TRUE)
 print(q)
+View(y %>% filter(Country_Region=='Germany'))
+
