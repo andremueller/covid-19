@@ -1,21 +1,10 @@
-# 
+# COVID-19 Plots
 library(readr)
 library(tidyr)
 library(dplyr)
 library(ggplot2)
 library(lubridate)
 
-# confirmed <- read_csv("~/Projekte/covid/COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Confirmed.csv")
-# X <- confirmed %>% filter(`Country/Region`=='Germany')
-# 
-# xx <- X[5:length(X)]
-# tt <- mdy(names(xx))
-# xx <- unlist(xx)
-# n <- length(xx)
-# y <- tibble(time = tt,
-#             confirmed = xx,
-#             replication_rate = c(NA, confirmed[2:n]/confirmed[1:(n-1)]))
-#plot(diff(xx) / xx[2:length(xx)])
 y <- read_csv("../COVID-19/data/cases_time.csv",
               col_types = cols(
                 Country_Region = col_character(),
@@ -27,6 +16,7 @@ y <- read_csv("../COVID-19/data/cases_time.csv",
                 Delta_Confirmed = col_double(),
                 Delta_Recovered = col_double()
               )) %>% mutate(Last_Update = mdy(Last_Update))
+updated <- max(y$Last_Update)
 events <- read_csv("events.csv") %>% mutate(Date = ymd(Date))
 
 world_time <- y %>% group_by(Last_Update) %>% 
@@ -43,10 +33,12 @@ p <- world_time %>% ggplot(aes(Last_Update, y=value, color=name)) +
 #scale_x_log10() + annotation_logticks()
 print(plotly::ggplotly(p, dynamicTicks = TRUE))
 
-LOWER_LIMIT <- 10
+LOWER_LIMIT <- 100
 y1 <- y %>%
   group_by(Country_Region) %>%
-  mutate(Replication_Rate = (Confirmed - lag(Confirmed)) / lag(Confirmed)) %>%
+  mutate(Replication_Rate = 100 * (Confirmed - lag(Confirmed)) / lag(Confirmed)) %>%
+  mutate(Death_Rate = 100 * (Deaths - lag(Deaths)) / lag(Deaths)) %>%
+  mutate(Mortality_Rate = 100 * Deaths / Confirmed) %>%
   filter(Confirmed >= LOWER_LIMIT) %>%
   mutate(Day = row_number()) %>%
   ungroup()
@@ -64,32 +56,63 @@ total <- y %>% group_by(Country_Region) %>% slice(n()) %>% ungroup() %>%
   summarize(max(Last_Update), sum(Confirmed), sum(Deaths), sum(Recovered))
 View(total)
 
-sel <- c('Germany', 'China', 'Italy', 'France')
+# Select the top n countries
 sel <- y_current$Country_Region[1:8]
+
+# Replication rates
 p <- y1 %>% 
   filter(Country_Region %in% sel) %>%
-  ggplot(aes(Last_Update, Replication_Rate, text = Confirmed, color = Country_Region)) + geom_line()
+  ggplot(aes(Day, Replication_Rate, text = Confirmed, color = Country_Region,
+             Confirmed = Confirmed, Deaths = Deaths, Last_Update = Last_Update)) + 
+  geom_line() + geom_line(aes(y=Death_Rate), linetype='dotted') + theme_bw() +
+  ylab('Replication Rate [%]')
 q <- plotly::ggplotly(p, dynamicTicks = TRUE)
 print(q)
 View(y %>% filter(Country_Region=='Germany'))
 
-y2 <- y1 %>% filter(Country_Region %in% sel) %>% 
-  mutate(info = paste0(Last_Update, " Confirmed = ", Confirmed))
+y2 <- y1 %>% filter(Country_Region %in% sel)
 
-# Active
+# Confirmed Cases
 p1 <- y2 %>%
-  ggplot(aes(Day, Active, color = Country_Region, text = Confirmed)) + 
-  theme_bw() +
-  geom_line() + geom_line(aes(y=Deaths), linetype='dotted')  #+ scale_y_log10()
+  ggplot(aes(Day, Confirmed, color = Country_Region, 
+             Last_Update = Last_Update, Deaths = Deaths)) + 
+  ggtitle(sprintf("COVID-19 Confirmed Cases (%s)", updated)) +
+  theme_bw() + geom_line() +
+  scale_y_log10() + annotation_logticks(sides="l")
 print(p1)
-q1 <- plotly::ggplotly(p1, dynamicTicks = TRUE)
+q1 <- plotly::ggplotly(p1, dynamicTicks = FALSE)
 print(q1)
 
-# Confirmed
+# Active cases
 p1 <- y2 %>%
-  ggplot(aes(Day, Confirmed, color = Country_Region)) + 
-  theme_bw() + 
-  geom_line() + geom_line(aes(y=Deaths), linetype='dotted')  #+ scale_y_log10()
+  ggplot(aes(Day, Active, color = Country_Region, 
+             Confirmed = Confirmed, Last_Update = Last_Update, Deaths = Deaths)) + 
+  ggtitle(sprintf("COVID-19 Active Cases (%s)", updated)) +
+  theme_bw() + geom_line() +
+  scale_y_log10() + annotation_logticks(sides="l")
+print(p1)
+q1 <- plotly::ggplotly(p1, dynamicTicks = FALSE)
+print(q1)
+
+# Deaths
+p1 <- y2 %>%
+  ggplot(aes(Day, Deaths, color = Country_Region, 
+             Confirmed = Confirmed, Last_Update = Last_Update)) + 
+  ggtitle(sprintf("COVID-19 Deaths (%s)", updated)) +
+  theme_bw() + geom_line() +
+  scale_y_log10() + annotation_logticks(sides="l")
+print(p1)
+q1 <- plotly::ggplotly(p1, dynamicTicks = FALSE)
+print(q1)
+
+# Mortality Rate
+p1 <- y2 %>%
+  ggplot(aes(Day, Mortality_Rate, color = Country_Region, 
+             Confirmed = Confirmed, Deaths = Deaths, Last_Update = Last_Update)) + 
+  ggtitle(sprintf("COVID-19 Mortality Rate (%s)", updated)) +
+  theme_bw() + geom_line() +
+  scale_y_log10() + annotation_logticks(sides="l") +
+  ylab("Mortality Rate [%]")
 print(p1)
 q1 <- plotly::ggplotly(p1, dynamicTicks = FALSE)
 print(q1)
