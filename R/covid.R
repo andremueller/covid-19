@@ -84,15 +84,15 @@ q1 <- plotly::ggplotly(p1, dynamicTicks = FALSE)
 print(q1)
 
 # Active cases
-p1 <- y2 %>%
-  ggplot(aes(Day, Active, color = Country_Region, 
-             Confirmed = Confirmed, Last_Update = Last_Update, Deaths = Deaths)) + 
-  ggtitle(sprintf("COVID-19 Active Cases (%s)", updated)) +
-  theme_bw() + geom_line() +
-  scale_y_log10() + annotation_logticks(sides="l")
-print(p1)
-q1 <- plotly::ggplotly(p1, dynamicTicks = FALSE)
-print(q1)
+# p1 <- y2 %>%
+#   ggplot(aes(Day, Active, color = Country_Region, 
+#              Confirmed = Confirmed, Last_Update = Last_Update, Deaths = Deaths)) + 
+#   ggtitle(sprintf("COVID-19 Active Cases (%s)", updated)) +
+#   theme_bw() + geom_line() +
+#   scale_y_log10() + annotation_logticks(sides="l")
+# print(p1)
+# q1 <- plotly::ggplotly(p1, dynamicTicks = FALSE)
+# print(q1)
 
 # Deaths
 p1 <- y2 %>%
