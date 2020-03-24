@@ -2,6 +2,8 @@
 
 1. We use the data base pushed daily by the John Hopkins University https://github.com/CSSEGISandData/COVID-19.git
 2. Required https://www.r-project.org with some packages (look the source code)
+3. Another data source for covid data:
+https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide
 
 see also https://www.visualcapitalist.com/infection-trajectory-flattening-the-covid19-curve/
 

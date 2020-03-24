@@ -4,26 +4,63 @@ library(tidyr)
 library(dplyr)
 library(ggplot2)
 library(lubridate)
+requireNamespace("curl")
 
-y <- read_csv("../COVID-19/data/cases_time.csv",
-              col_types = cols(
-                Country_Region = col_character(),
-                Last_Update = col_character(),
-                Confirmed = col_double(),
-                Deaths = col_double(),
-                Recovered = col_double(),
-                Active = col_double(),
-                Delta_Confirmed = col_double(),
-                Delta_Recovered = col_double()
-              )) %>% mutate(Last_Update = mdy(Last_Update))
+DO_CACHE <- TRUE
+
+# load data from the John Hopkins university
+load_john_hopkins_data <- function() {
+  read_csv("../COVID-19/data/cases_time.csv",
+           col_types = cols(
+             Country_Region = col_character(),
+             Last_Update = col_character(),
+             Confirmed = col_double(),
+             Deaths = col_double(),
+             Recovered = col_double(),
+             Active = col_double(),
+             Delta_Confirmed = col_double(),
+             Delta_Recovered = col_double()
+           )) %>% mutate(Last_Update = mdy(Last_Update)) %>%
+    select(-Active, -Recovered, -Delta_Recovered)
+}
+
+# load data from European Centre for Disease Prevention and Control (ECDC)
+# transform into the John Hopkins format
+load_ecdc_data <- function(){
+  data_url <- paste0("https://www.ecdc.europa.eu/sites/default/files/documents/COVID-19-geographic-disbtribution-worldwide-", 
+                     format(Sys.time(), "%Y-%m-%d"), ".csv")
+  if (DO_CACHE) {
+    cache_file <- "covid19_ecdc_cache.csv"
+    if (!file.exists(cache_file)) {
+      curl::curl_download(data_url, cache_file)
+    }
+  } else {
+    cache_file <- data_url
+  }
+  raw <- read_csv(cache_file)
+  raw %>%
+    mutate(DateRep = dmy(DateRep)) %>%
+    rename(Country_Region = `Countries and territories`) %>%
+    rename(Last_Update = DateRep) %>%
+    rename(Delta_Confirmed = Cases) %>%
+    rename(Delta_Deaths = Deaths) %>%
+    group_by(Country_Region) %>%
+    arrange(Last_Update) %>%
+    mutate(Confirmed = cumsum(Delta_Confirmed)) %>%
+    mutate(Deaths = cumsum(Delta_Deaths)) %>%
+    ungroup() %>%
+    select(Country_Region, Last_Update, Confirmed, Deaths, Delta_Confirmed, Delta_Deaths)
+}
+
+
+y <- load_ecdc_data()
+
 updated <- max(y$Last_Update)
 events <- read_csv("events.csv") %>% mutate(Date = ymd(Date))
 
 world_time <- y %>% group_by(Last_Update) %>% 
   summarize(Confirmed = sum(Confirmed), 
             Deaths = sum(Deaths),
-            Recovered = sum(Recovered),
-            Active = sum(Active),
             Mortality_Rate = Deaths/Confirmed * 100.0) %>%
   ungroup() %>%
   pivot_longer(-Last_Update)
@@ -53,7 +90,7 @@ y_current <- y1 %>% group_by(Country_Region) %>% slice(n()) %>%
 View(y_current)
 
 total <- y %>% group_by(Country_Region) %>% slice(n()) %>% ungroup() %>%
-  summarize(max(Last_Update), sum(Confirmed), sum(Deaths), sum(Recovered))
+  summarize(max(Last_Update), sum(Confirmed), sum(Deaths))
 View(total)
 
 # Select the top n countries
@@ -82,17 +119,6 @@ p1 <- y2 %>%
 print(p1)
 q1 <- plotly::ggplotly(p1, dynamicTicks = FALSE)
 print(q1)
-
-# Active cases
-# p1 <- y2 %>%
-#   ggplot(aes(Day, Active, color = Country_Region, 
-#              Confirmed = Confirmed, Last_Update = Last_Update, Deaths = Deaths)) + 
-#   ggtitle(sprintf("COVID-19 Active Cases (%s)", updated)) +
-#   theme_bw() + geom_line() +
-#   scale_y_log10() + annotation_logticks(sides="l")
-# print(p1)
-# q1 <- plotly::ggplotly(p1, dynamicTicks = FALSE)
-# print(q1)
 
 # Deaths
 p1 <- y2 %>%
