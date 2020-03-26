@@ -6,6 +6,10 @@ library(ggplot2)
 library(lubridate)
 requireNamespace("curl")
 
+if (!is.null(dev.list())) {
+  dev.off()
+}
+
 DO_CACHE <- TRUE
 
 # load data from the John Hopkins university
@@ -21,7 +25,8 @@ load_john_hopkins_data <- function() {
              Delta_Confirmed = col_double(),
              Delta_Recovered = col_double()
            )) %>% mutate(Last_Update = mdy(Last_Update)) %>%
-    select(-Active, -Recovered, -Delta_Recovered)
+    select(-Active, -Recovered, -Delta_Recovered) %>%
+    mutate(Delta_Deaths = c(0, diff(Deaths)))
 }
 
 # load data from European Centre for Disease Prevention and Control (ECDC)
@@ -137,8 +142,20 @@ p1 <- y2 %>%
              Confirmed = Confirmed, Deaths = Deaths, Last_Update = Last_Update)) + 
   ggtitle(sprintf("COVID-19 Mortality Rate (%s)", updated)) +
   theme_bw() + geom_line() +
-  scale_y_log10() + annotation_logticks(sides="l") +
   ylab("Mortality Rate [%]")
 print(p1)
-q1 <- plotly::ggplotly(p1, dynamicTicks = FALSE)
+q1 <- plotly::ggplotly(p1, dynamicTicks = TRUE)
+print(q1)
+
+# Delta_Confirmed
+p1 <- y2 %>%
+  ggplot(aes(Day, Delta_Confirmed, color = Country_Region,
+             Delta_Deaths = Delta_Deaths,
+             Confirmed = Confirmed, Deaths = Deaths, Last_Update = Last_Update)) + 
+  ggtitle(sprintf("COVID-19 Differential Cases (%s)", updated)) +
+  geom_line(aes(y=Delta_Deaths), linetype = 'dotted') +
+  theme_bw() + geom_line() +
+  ylab("Number of Cases")
+print(p1)
+q1 <- plotly::ggplotly(p1, dynamicTicks = TRUE)
 print(q1)
